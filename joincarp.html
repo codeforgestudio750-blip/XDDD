@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Joincarp — Panel de Servidores Minecraft</title>
+  <meta name="description" content="Joincarp: gestiona tus servidores Minecraft desde una interfaz profesional. Consola, backups, plugins, tienda integrada y más.">
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%23FF5257'/%3E%3Ctext x='18' y='24' font-family='Arial,sans-serif' font-weight='800' font-size='16' text-anchor='middle' fill='%23fff'%3EJ%3C/text%3E%3C/svg%3E">
+  <meta property="og:title" content="Joincarp — Panel de Servidores Minecraft">
+  <meta property="og:description" content="Gestiona tus servidores Minecraft desde una interfaz profesional. Consola, backups, plugins y tienda integrada.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0b0b0d">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    :root {
+      --bg: #0b0b0d;
+      --bg-card: #131318;
+      --bg-card-hover: #1a1a22;
+      --red: #FF5257;
+      --red-dark: #CC3E42;
+      --red-glow: rgba(255,82,87,0.25);
+      --cyan: #00F5FF;
+      --text: #f0f0f2;
+      --text-muted: #8a8a95;
+      --border: #1e1e26;
+      --gradient: linear-gradient(135deg, #FF5257, #FF2D55);
+    }
+
+    html.lenis, html.lenis body { height: auto; }
+    .lenis.lenis-smooth { scroll-behavior: auto !important; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    a { color: inherit; text-decoration: none; cursor: none; }
+    button { cursor: none; }
+    img { max-width: 100%; display: block; }
+    h1,h2,h3,h4,h5,h6 { font-family: 'Space Grotesk', sans-serif; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* ===== CURSOR ===== */
+    .cursor-dot {
+      position: fixed; top:0; left:0; width:8px; height:8px;
+      background: var(--red); border-radius:50%; pointer-events:none;
+      z-index:99999; transform: translate(-50%,-50%);
+      transition: width .3s, height .3s, background .3s;
+      mix-blend-mode: difference;
+    }
+    .cursor-ring {
+      position: fixed; top:0; left:0; width:40px; height:40px;
+      border:1.5px solid rgba(255,82,87,.5); border-radius:50%;
+      pointer-events:none; z-index:99998; transform: translate(-50%,-50%);
+      transition: width .4s cubic-bezier(.16,1,.3,1), height .4s cubic-bezier(.16,1,.3,1),
+                  border-color .3s, background .3s;
+    }
+    .cursor-dot.hovering { width:50px; height:50px; background:rgba(255,82,87,.15); border:1px solid var(--red); }
+    .cursor-ring.hovering { width:70px; height:70px; border-color:var(--cyan); background:rgba(0,245,255,.06); }
+    .cursor-dot.clicking { transform: translate(-50%,-50%) scale(.7); }
+
+    /* ===== NAVBAR ===== */
+    .navbar {
+      position:fixed; top:0; left:0; right:0; z-index:1000;
+      padding:20px 0; transition: background .4s, backdrop-filter .4s, padding .4s;
+    }
+    .navbar.scrolled {
+      background:rgba(11,11,13,.9); backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px); padding:12px 0;
+      border-bottom:1px solid rgba(30,30,38,.6);
+    }
+    .navbar .container { display:flex; align-items:center; justify-content:space-between; }
+    .logo { display:flex; align-items:center; gap:10px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.3rem; }
+    .logo-icon {
+      width:36px; height:36px; background:var(--gradient); border-radius:10px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1rem; color:#fff; font-weight:800;
+    }
+    .nav-links { display:flex; gap:32px; list-style:none; }
+    .nav-links a { font-size:.9rem; color:var(--text-muted); transition:color .3s; font-weight:500; }
+    .nav-links a:hover { color:var(--red); }
+    .nav-cta {
+      padding:10px 24px; background:var(--gradient); border:none; border-radius:8px;
+      color:#fff; font-weight:600; font-size:.9rem; font-family:'Space Grotesk',sans-serif;
+      transition: opacity .3s, transform .3s, box-shadow .3s;
+    }
+    .nav-cta:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 4px 20px var(--red-glow); }
+    .mobile-toggle { display:none; flex-direction:column; gap:5px; background:none; border:none; padding:4px; }
+    .mobile-toggle span { width:24px; height:2px; background:var(--text); border-radius:2px; }
+
+    /* ===== HERO ===== */
+    .hero {
+      position:relative; min-height:100vh; display:flex; align-items:center;
+      overflow:hidden; padding-top:80px;
+    }
+    #hero-canvas { position:absolute; inset:0; z-index:0; }
+    .hero-overlay {
+      position:absolute; inset:0; z-index:1;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 45%, transparent 0%, rgba(11,11,13,.35) 50%, var(--bg) 78%),
+        radial-gradient(ellipse 50% 40% at 25% 55%, rgba(255,82,87,.05) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 75% 45%, rgba(255,45,85,.04) 0%, transparent 70%);
+    }
+    .hero-content { position:relative; z-index:2; text-align:center; width:100%; }
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:8px; padding:8px 20px;
+      border:1px solid var(--border); border-radius:100px; font-size:.85rem;
+      color:var(--text-muted); margin-bottom:28px;
+      background:rgba(19,19,24,.7); backdrop-filter:blur(10px);
+    }
+    .hero-badge .dot { width:8px; height:8px; background:#22C55E; border-radius:50%; animation:pulse-dot 2s ease-in-out infinite; }
+    @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+    .hero h1 {
+      font-size:clamp(2.5rem,7vw,5.5rem); font-weight:700; line-height:1.05;
+      margin-bottom:24px; letter-spacing:-.03em;
+    }
+    .hero h1 .gradient-text {
+      background:var(--gradient); -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    .hero p {
+      font-size:clamp(1rem,2vw,1.2rem); color:var(--text-muted);
+      max-width:580px; margin:0 auto 40px; line-height:1.7;
+    }
+    .hero-buttons { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+
+    .btn-primary {
+      position:relative; padding:16px 36px; background:var(--gradient); border:none;
+      border-radius:12px; color:#fff; font-weight:600; font-size:1rem;
+      font-family:'Space Grotesk',sans-serif; overflow:hidden;
+      transition: transform .3s, box-shadow .3s;
+    }
+    .btn-primary:hover {
+      transform:translateY(-2px);
+      box-shadow:0 8px 32px var(--red-glow), 0 4px 16px rgba(255,45,85,.2);
+    }
+    .btn-secondary {
+      padding:16px 36px; background:transparent; border:1px solid var(--border);
+      border-radius:12px; color:var(--text); font-weight:600; font-size:1rem;
+      font-family:'Space Grotesk',sans-serif; transition: border-color .3s, background .3s;
+    }
+    .btn-secondary:hover { border-color:var(--red); background:rgba(255,82,87,.05); }
+
+    .hero-price-badge {
+      display:inline-flex; align-items:center; gap:12px; margin-top:40px;
+      padding:16px 32px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:16px;
+    }
+    .hero-price-badge .price-big {
+      font-family:'Space Grotesk',sans-serif; font-size:2rem; font-weight:700; color:var(--red);
+    }
+    .hero-price-badge .price-info { text-align:left; }
+    .hero-price-badge .price-info span { display:block; font-size:.85rem; color:var(--text-muted); }
+    .hero-price-badge .price-info strong { font-size:.95rem; color:var(--text); }
+
+    /* ===== APP PREVIEW ===== */
+    .app-preview {
+      position:relative; margin-top:-60px; padding:0 24px; z-index:2;
+    }
+    .app-window {
+      max-width:1000px; margin:0 auto; border-radius:16px; overflow:hidden;
+      border:1px solid var(--border); background:var(--bg-card);
+      box-shadow: 0 40px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,82,87,.08);
+    }
+    .app-titlebar {
+      display:flex; align-items:center; gap:8px; padding:12px 16px;
+      background:#0e0e12; border-bottom:1px solid var(--border);
+    }
+    .app-titlebar .dot { width:12px; height:12px; border-radius:50%; }
+    .app-titlebar .dot.r { background:#FF5F57; }
+    .app-titlebar .dot.y { background:#FFBD2E; }
+    .app-titlebar .dot.g { background:#28C840; }
+    .app-titlebar span { margin-left:12px; font-size:.8rem; color:var(--text-muted); }
+    .app-body {
+      display:grid; grid-template-columns:200px 1fr; min-height:420px;
+    }
+    .app-sidebar {
+      background:#0e0e12; border-right:1px solid var(--border); padding:16px 0;
+    }
+    .app-sidebar-brand {
+      padding:0 16px 16px; border-bottom:1px solid var(--border); margin-bottom:12px;
+      font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:.9rem;
+      display:flex; align-items:center; gap:8px;
+    }
+    .app-sidebar-brand .brand-icon {
+      width:28px; height:28px; background:var(--gradient); border-radius:6px;
+      display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:800; color:#fff;
+    }
+    .app-sidebar-item {
+      display:flex; align-items:center; gap:10px; padding:10px 16px;
+      font-size:.8rem; color:var(--text-muted); transition: all .2s;
+    }
+    .app-sidebar-item.active { color:var(--red); background:rgba(255,82,87,.06); border-right:2px solid var(--red); }
+    .app-sidebar-item i { width:16px; height:16px; }
+    .app-main { padding:24px; }
+    .app-main-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .app-main-header h3 { font-size:1.1rem; font-weight:600; }
+    .app-status { display:flex; align-items:center; gap:6px; font-size:.8rem; color:#22C55E; }
+    .app-status .dot { width:6px; height:6px; background:#22C55E; border-radius:50%; }
+    .app-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+    .app-metric {
+      padding:16px; background:rgba(30,30,38,.5); border:1px solid var(--border);
+      border-radius:10px;
+    }
+    .app-metric-label { font-size:.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+    .app-metric-value { font-family:'Space Grotesk',sans-serif; font-size:1.3rem; font-weight:700; }
+    .app-metric-value.red { color:var(--red); }
+    .app-metric-value.cyan { color:var(--cyan); }
+    .app-console {
+      background:#0a0a0c; border:1px solid var(--border); border-radius:8px;
+      padding:16px; font-family:'Courier New',monospace; font-size:.75rem;
+      color:#8a8a95; line-height:1.8; max-height:180px; overflow:hidden;
+    }
+    .app-console .line-time { color:#555; }
+    .app-console .line-info { color:var(--cyan); }
+    .app-console .line-warn { color:#FFBD2E; }
+    .app-console .line-ok { color:#22C55E; }
+
+    /* ===== SECTIONS ===== */
+    section { padding:120px 0; position:relative; }
+    .section-header { text-align:center; margin-bottom:72px; }
+    .section-tag {
+      display:inline-flex; align-items:center; gap:6px; padding:6px 16px;
+      background:rgba(255,82,87,.08); border:1px solid rgba(255,82,87,.15);
+      border-radius:100px; font-size:.8rem; color:var(--red);
+      text-transform:uppercase; letter-spacing:.1em; font-weight:600; margin-bottom:20px;
+    }
+    .section-header h2 { font-size:clamp(2rem,4vw,3rem); font-weight:700; letter-spacing:-.02em; margin-bottom:16px; }
+    .section-header p { color:var(--text-muted); font-size:1.1rem; max-width:540px; margin:0 auto; line-height:1.7; }
+
+    .glow-divider {
+      width:100%; height:1px;
+      background:linear-gradient(to right, transparent, var(--border), transparent);
+      position:relative;
+    }
+    .glow-divider::after {
+      content:''; position:absolute; top:-2px; left:50%; transform:translateX(-50%);
+      width:200px; height:5px; background:var(--gradient); border-radius:4px;
+      filter:blur(4px); opacity:.4;
+    }
+
+    /* ===== FEATURES ===== */
+    .features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
+    .feature-card {
+      padding:32px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:16px; transition: transform .4s, border-color .4s;
+      position:relative; overflow:hidden;
+    }
+    .feature-card::before {
+      content:''; position:absolute; inset:0; border-radius:16px; padding:1px;
+      background:linear-gradient(135deg, transparent 40%, var(--red) 50%, transparent 70%);
+      -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude; opacity:0; transition:opacity .4s;
+    }
+    .feature-card:hover::before { opacity:1; }
+    .feature-card:hover { transform:translateY(-3px); }
+    .feature-icon {
+      width:48px; height:48px; border-radius:12px;
+      background:rgba(255,82,87,.08); border:1px solid rgba(255,82,87,.12);
+      display:flex; align-items:center; justify-content:center;
+      margin-bottom:20px; color:var(--red); transition:background .3s;
+    }
+    .feature-card:hover .feature-icon { background:rgba(255,82,87,.14); }
+    .feature-card h3 { font-size:1.1rem; font-weight:600; margin-bottom:8px; }
+    .feature-card p { color:var(--text-muted); font-size:.9rem; line-height:1.7; }
+
+    /* ===== REVIEWS ===== */
+    .reviews-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; }
+    .review-card {
+      padding:28px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:16px; transition:transform .4s, border-color .4s;
+    }
+    .review-card:hover { transform:translateY(-3px); border-color:rgba(255,82,87,.3); }
+    .review-stars { display:flex; gap:3px; margin-bottom:14px; color:var(--red); }
+    .review-stars i { width:14px; height:14px; fill:var(--red); }
+    .review-card p { font-size:.9rem; color:var(--text); line-height:1.6; margin-bottom:18px; }
+    .review-author { display:flex; align-items:center; gap:10px; }
+    .review-avatar {
+      width:36px; height:36px; border-radius:50%; display:flex; align-items:center;
+      justify-content:center; background:var(--gradient); color:#fff; font-weight:700;
+      font-size:.8rem; font-family:'Space Grotesk',sans-serif; flex-shrink:0;
+    }
+    .review-author span { font-size:.82rem; color:var(--text-muted); }
+    .review-author strong { display:block; font-size:.88rem; }
+
+    /* ===== PAGES SHOWCASE ===== */
+    .pages-scroll-wrapper { position:relative; width:100%; overflow:hidden; padding:20px 0; }
+    .pages-scroll-wrapper::before, .pages-scroll-wrapper::after {
+      content:''; position:absolute; top:0; bottom:0; width:120px; z-index:2; pointer-events:none;
+    }
+    .pages-scroll-wrapper::before { left:0; background:linear-gradient(to right, var(--bg), transparent); }
+    .pages-scroll-wrapper::after { right:0; background:linear-gradient(to left, var(--bg), transparent); }
+    .pages-track {
+      display:flex; gap:16px; width:max-content; cursor:grab; user-select:none;
+    }
+    .pages-track:active { cursor:grabbing; }
+    .page-chip {
+      padding:12px 24px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:100px; font-size:.85rem; font-weight:500; color:var(--text-muted);
+      white-space:nowrap; flex-shrink:0; transition:all .3s;
+      display:inline-flex; align-items:center; gap:8px;
+    }
+    .page-chip i { color:var(--red); opacity:.7; transition:opacity .3s; }
+    .page-chip:hover i { opacity:1; }
+    .page-chip:hover { border-color:var(--red); color:var(--red); background:rgba(255,82,87,.05); }
+
+    /* ===== PRICING ===== */
+    .pricing-wrapper { max-width:500px; margin:0 auto; }
+    .pricing-card {
+      padding:48px 40px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:24px; text-align:center; position:relative;
+    }
+    .pricing-card.featured { border-color:var(--red); }
+    .pricing-card.featured::before {
+      content:''; position:absolute; inset:-1px; border-radius:24px; padding:1px;
+      background:var(--gradient);
+      -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude;
+    }
+    .pricing-popular {
+      position:absolute; top:-14px; left:50%; transform:translateX(-50%);
+      padding:6px 20px; background:var(--gradient); border-radius:100px;
+      font-size:.75rem; font-weight:600; color:#fff; text-transform:uppercase; letter-spacing:.05em;
+    }
+    .pricing-card h3 { font-size:1.3rem; font-weight:600; margin-bottom:8px; }
+    .pricing-card .price-desc { font-size:.9rem; color:var(--text-muted); margin-bottom:28px; }
+    .price { display:flex; align-items:baseline; justify-content:center; gap:4px; margin-bottom:32px; }
+    .price .amount { font-family:'Space Grotesk',sans-serif; font-size:4rem; font-weight:700; color:var(--red); }
+    .price .period { font-size:1rem; color:var(--text-muted); }
+    .pricing-features {
+      list-style:none; margin-bottom:36px; display:flex; flex-direction:column; gap:14px; text-align:left;
+    }
+    .pricing-features li { display:flex; align-items:center; gap:12px; font-size:.95rem; color:var(--text-muted); }
+    .pricing-features li i { color:var(--red); flex-shrink:0; }
+    .pricing-btn {
+      display:block; width:100%; padding:16px; border-radius:12px; text-align:center;
+      font-weight:600; font-size:1rem; font-family:'Space Grotesk',sans-serif;
+      transition:all .3s; border:none;
+    }
+    .pricing-btn.primary { background:var(--gradient); color:#fff; }
+    .pricing-btn.primary:hover { box-shadow:0 8px 32px var(--red-glow); transform:translateY(-2px); }
+
+    /* ===== TESTIMONIALS ===== */
+    .testimonials-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:20px; }
+    .testimonial-card {
+      padding:32px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:16px;
+    }
+    .testimonial-stars { display:flex; gap:4px; margin-bottom:16px; color:#FFBD2E; }
+    .testimonial-card p { color:var(--text-muted); font-size:.95rem; line-height:1.7; margin-bottom:20px; font-style:italic; }
+    .testimonial-author { display:flex; align-items:center; gap:12px; }
+    .testimonial-avatar {
+      width:40px; height:40px; border-radius:50%; background:var(--gradient);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.85rem; color:#fff;
+    }
+    .testimonial-name { font-size:.9rem; font-weight:600; }
+    .testimonial-role { font-size:.8rem; color:var(--text-muted); }
+
+    /* ===== FAQ ===== */
+    .faq-list { max-width:700px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+    .faq-item {
+      padding:20px 24px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:12px; cursor:pointer; transition:border-color .3s;
+    }
+    .faq-item:hover { border-color:rgba(255,82,87,.3); }
+    .faq-item h4 { font-size:1rem; font-weight:600; margin-bottom:0; display:flex; justify-content:space-between; align-items:center; }
+    .faq-item h4 i { transition:transform .3s; color:var(--red); }
+    .faq-item.open h4 i { transform:rotate(180deg); }
+    .faq-item p { color:var(--text-muted); font-size:.9rem; line-height:1.7; margin-top:12px; display:none; }
+    .faq-item.open p { display:block; }
+
+    /* ===== FOOTER ===== */
+    footer { padding:64px 0 32px; border-top:1px solid var(--border); }
+    .footer-grid { display:grid; grid-template-columns:2fr 1fr 1fr; gap:48px; margin-bottom:48px; }
+    .footer-brand p { color:var(--text-muted); font-size:.9rem; line-height:1.7; margin-top:16px; max-width:280px; }
+    .footer-col h4 {
+      font-size:.85rem; font-weight:600; text-transform:uppercase; letter-spacing:.1em;
+      color:var(--text-muted); margin-bottom:20px;
+    }
+    .footer-col ul { list-style:none; display:flex; flex-direction:column; gap:12px; }
+    .footer-col ul a { font-size:.9rem; color:var(--text-muted); transition:color .3s; }
+    .footer-col ul a:hover { color:var(--red); }
+    .footer-bottom {
+      display:flex; justify-content:space-between; align-items:center;
+      padding-top:32px; border-top:1px solid var(--border); font-size:.85rem; color:var(--text-muted);
+    }
+    .footer-socials { display:flex; gap:16px; }
+    .footer-socials a {
+      width:36px; height:36px; border-radius:8px; border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center; color:var(--text-muted);
+      transition:all .3s;
+    }
+    .footer-socials a:hover { border-color:var(--red); color:var(--red); background:rgba(255,82,87,.05); }
+
+    /* ===== MOBILE MENU ===== */
+    .mobile-menu {
+      display:none; position:fixed; inset:0; z-index:999;
+      background:rgba(11,11,13,.97); backdrop-filter:blur(20px);
+      flex-direction:column; align-items:center; justify-content:center; gap:32px;
+    }
+    .mobile-menu.active { display:flex; }
+    .mobile-menu a { font-size:1.5rem; font-family:'Space Grotesk',sans-serif; font-weight:600; color:var(--text); transition:color .3s; }
+    .mobile-menu a:hover { color:var(--red); }
+    .mobile-close { position:absolute; top:24px; right:24px; background:none; border:none; color:var(--text); font-size:1.5rem; }
+
+    /* ===== REVEALS ===== */
+    .reveal { opacity:0; transform:translateY(40px); }
+    .reveal-left { opacity:0; transform:translateX(-40px); }
+    .reveal-right { opacity:0; transform:translateX(40px); }
+    .reveal-scale { opacity:0; transform:scale(.95); }
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:768px) {
+      .nav-links,.nav-cta { display:none; }
+      .mobile-toggle { display:flex; }
+      .app-body { grid-template-columns:1fr; }
+      .app-sidebar { display:none; }
+      .app-metrics { grid-template-columns:repeat(2,1fr); }
+      .features-grid { grid-template-columns:1fr; max-width:420px; margin:0 auto; }
+      .testimonials-grid { grid-template-columns:1fr; }
+      .footer-grid { grid-template-columns:1fr; gap:32px; }
+      .footer-bottom { flex-direction:column; gap:16px; text-align:center; }
+      section { padding:80px 0; }
+      .cursor-dot,.cursor-ring { display:none; }
+      .hero-price-badge { flex-direction:column; text-align:center; }
+    }
+    @media(max-width:480px) {
+      .hero h1 { font-size:2.2rem; }
+      .hero-buttons { flex-direction:column; align-items:center; }
+      .btn-primary,.btn-secondary { width:100%; text-align:center; }
+      .app-metrics { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CURSOR -->
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="#hero" class="logo">
+        <div class="logo-icon">J</div>
+        <span>Joincarp</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#preview">Panel</a></li>
+        <li><a href="#pricing">Precio</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <a href="#pricing" class="nav-cta">Comprar Licencia</a>
+      <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-close" id="mobileClose">&times;</button>
+    <a href="#features" class="mobile-link">Features</a>
+    <a href="#preview" class="mobile-link">Panel</a>
+    <a href="#pricing" class="mobile-link">Precio</a>
+    <a href="#faq" class="mobile-link">FAQ</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+      <div class="hero-badge reveal-scale">
+        <span class="dot"></span>
+        v1.2 — Windows 10/11
+      </div>
+      <a href="index.html" class="hero-badge reveal-scale" style="margin-left:12px;color:var(--text-muted);text-decoration:none">
+        <i data-lucide="arrow-up-right" style="width:14px;height:14px"></i>
+        Un producto de CodeForge Studio
+      </a>
+      <h1 class="reveal">
+        Gestiona tus servidores<br><span class="gradient-text">Minecraft</span> like a pro
+      </h1>
+      <p class="reveal">
+        Consola en tiempo real, backups automaticos, tienda de plugins, gestion de jugadores,
+        bases de datos y mas. Todo desde una sola app de escritorio.
+      </p>
+      <div class="hero-buttons reveal">
+        <a href="https://wa.me/51948935232?text=Hola%2C%20quiero%20comprar%20la%20licencia%20de%20Joincarp%20%28%2415%29" target="_blank" class="btn-primary">
+          <i data-lucide="download" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px"></i>
+          Comprar Licencia — $15
+        </a>
+        <a href="#preview" class="btn-secondary">Ver Panel</a>
+      </div>
+      <div class="hero-price-badge reveal-scale">
+        <div class="price-big">$15</div>
+        <div class="price-info">
+          <strong>Licencia por PC</strong>
+          <span>Pago unico · Actualizaciones incluidas</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APP PREVIEW -->
+  <div class="app-preview" id="preview">
+    <div class="app-window reveal-scale">
+      <div class="app-titlebar">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <span>Joincarp — Panel de servidores Minecraft</span>
+      </div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="app-sidebar-brand">
+            <div class="brand-icon">J</div>
+            JOINCARP
+          </div>
+          <div class="app-sidebar-item active"><i data-lucide="home" style="width:16px;height:16px"></i> Home</div>
+          <div class="app-sidebar-item"><i data-lucide="terminal" style="width:16px;height:16px"></i> Console</div>
+          <div class="app-sidebar-item"><i data-lucide="folder" style="width:16px;height:16px"></i> Files</div>
+          <div class="app-sidebar-item"><i data-lucide="hard-drive" style="width:16px;height:16px"></i> Backups</div>
+          <div class="app-sidebar-item"><i data-lucide="database" style="width:16px;height:16px"></i> Databases</div>
+          <div class="app-sidebar-item"><i data-lucide="clock" style="width:16px;height:16px"></i> Schedules</div>
+          <div class="app-sidebar-item"><i data-lucide="settings" style="width:16px;height:16px"></i> Settings</div>
+          <div class="app-sidebar-item"><i data-lucide="shopping-bag" style="width:16px;height:16px"></i> Store</div>
+          <div class="app-sidebar-item"><i data-lucide="gamepad-2" style="width:16px;height:16px"></i> Game Swap</div>
+          <div class="app-sidebar-item"><i data-lucide="puzzle" style="width:16px;height:16px"></i> Plugins</div>
+          <div class="app-sidebar-item"><i data-lucide="users" style="width:16px;height:16px"></i> Players</div>
+          <div class="app-sidebar-item"><i data-lucide="globe" style="width:16px;height:16px"></i> Worlds</div>
+        </div>
+        <div class="app-main">
+          <div class="app-main-header">
+            <h3>Mi Server Paper 1.21</h3>
+            <div class="app-status"><span class="dot"></span> Online</div>
+          </div>
+          <div class="app-metrics">
+            <div class="app-metric">
+              <div class="app-metric-label">CPU</div>
+              <div class="app-metric-value red">23%</div>
+            </div>
+            <div class="app-metric">
+              <div class="app-metric-label">RAM</div>
+              <div class="app-metric-value cyan">3.2 / 8 GB</div>
+            </div>
+            <div class="app-metric">
+              <div class="app-metric-label">Disco</div>
+              <div class="app-metric-value">12.4 GB</div>
+            </div>
+            <div class="app-metric">
+              <div class="app-metric-label">Jugadores</div>
+              <div class="app-metric-value cyan">7 / 50</div>
+            </div>
+          </div>
+          <div class="app-console">
+            <div><span class="line-time">[14:23:01]</span> <span class="line-info">[Server]</span> Done (3.42s)! For help, type "help"</div>
+            <div><span class="line-time">[14:23:05]</span> <span class="line-ok">[Player]</span> Steve joined the game</div>
+            <div><span class="line-time">[14:23:12]</span> <span class="line-info">[Server]</span> Loading libraries, please wait...</div>
+            <div><span class="line-time">[14:23:18]</span> <span class="line-warn">[WARN]</span> Can't keep up! Is the server overloaded?</div>
+            <div><span class="line-time">[14:23:22]</span> <span class="line-ok">[Player]</span> Alex joined the game</div>
+            <div><span class="line-time">[14:23:30]</span> <span class="line-info">[RCON]</span> Connection established from 127.0.0.1</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="glow-divider" style="margin-top:120px"></div>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag reveal-scale">
+          <i data-lucide="sparkles" style="width:14px;height:14px"></i> Features
+        </div>
+        <h2 class="reveal">Todo lo que necesitas,<br><span class="gradient-text">en una sola app</span></h2>
+        <p class="reveal">17 paginas de herramientas para gestionar tus servidores Minecraft como un profesional.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="terminal" style="width:22px;height:22px"></i></div>
+          <h3>Consola en Tiempo Real</h3>
+          <p>Terminal con colores ANSI, filtros por nivel, comandos RCON y chat integrado. Batch rendering para 60fps.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="hard-drive" style="width:22px;height:22px"></i></div>
+          <h3>Backups Automaticos</h3>
+          <p>Crea, restaura y descarga backups como .zip. Programa tareas automaticas cada N minutos.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="shopping-bag" style="width:22px;height:22px"></i></div>
+          <h3>Tienda Integrada</h3>
+          <p>50 plugins y 50 modpacks populares descargables directamente desde Modrinth con un clic.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="users" style="width:22px;height:22px"></i></div>
+          <h3>Gestion de Jugadores</h3>
+          <p>Ve jugadores online con skins, gestiona whitelist, ops y bans. Soporta Vanilla, BungeeCord y Velocity.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="folder" style="width:22px;height:22px"></i></div>
+          <h3>Editor de Archivos</h3>
+          <p>Navegador de archivos con syntax highlighting para YAML, JSON, .properties, TOML e INI.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="database" style="width:22px;height:22px"></i></div>
+          <h3>Bases de Datos</h3>
+          <p>Explora bases de datos SQLite del servidor, exporta/importa .sql, crea y elimina DBs.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="bar-chart-3" style="width:22px;height:22px"></i></div>
+          <h3>Monitoreo en Vivo</h3>
+          <p> Graficas de CPU, RAM y red en tiempo real. Metricas de almacenamiento y uptime del servidor.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="globe" style="width:22px;height:22px"></i></div>
+          <h3>Multi-Version</h3>
+          <p>Descarga e instala diferentes versiones de Paper, Forge y Bedrock. Game swap y server importer incluidos.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon"><i data-lucide="shield" style="width:22px;height:22px"></i></div>
+          <h3>Licencia Segura</h3>
+          <p>Sistema de licencias offline con hardware-lock. Activate una vez, usa para siempre en tu PC.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-divider"></div>
+
+  <!-- PAGES SHOWCASE -->
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag reveal-scale">
+          <i data-lucide="layers" style="width:14px;height:14px"></i> 17 Paginas
+        </div>
+        <h2 class="reveal">Un panel <span class="gradient-text">completo</span></h2>
+        <p class="reveal">Cada pagina es una herramienta profesional disenada para tu flujo de trabajo.</p>
+      </div>
+    </div>
+    <div class="pages-scroll-wrapper">
+      <div class="pages-track" id="pagesTrack">
+        <div class="page-chip"><i data-lucide="home" style="width:14px;height:14px"></i> Home</div>
+        <div class="page-chip"><i data-lucide="terminal" style="width:14px;height:14px"></i> Console</div>
+        <div class="page-chip"><i data-lucide="folder" style="width:14px;height:14px"></i> Files</div>
+        <div class="page-chip"><i data-lucide="hard-drive" style="width:14px;height:14px"></i> Backups</div>
+        <div class="page-chip"><i data-lucide="database" style="width:14px;height:14px"></i> Databases</div>
+        <div class="page-chip"><i data-lucide="clock" style="width:14px;height:14px"></i> Schedules</div>
+        <div class="page-chip"><i data-lucide="settings" style="width:14px;height:14px"></i> Settings</div>
+        <div class="page-chip"><i data-lucide="shopping-bag" style="width:14px;height:14px"></i> Store</div>
+        <div class="page-chip"><i data-lucide="gamepad-2" style="width:14px;height:14px"></i> Game Swap</div>
+        <div class="page-chip"><i data-lucide="box" style="width:14px;height:14px"></i> Modpacks</div>
+        <div class="page-chip"><i data-lucide="puzzle" style="width:14px;height:14px"></i> Mods</div>
+        <div class="page-chip"><i data-lucide="puzzle" style="width:14px;height:14px"></i> Plugins</div>
+        <div class="page-chip"><i data-lucide="globe" style="width:14px;height:14px"></i> Worlds</div>
+        <div class="page-chip"><i data-lucide="file-cog" style="width:14px;height:14px"></i> Properties</div>
+        <div class="page-chip"><i data-lucide="users" style="width:14px;height:14px"></i> Player Manager</div>
+        <div class="page-chip"><i data-lucide="tag" style="width:14px;height:14px"></i> Server Version</div>
+        <div class="page-chip"><i data-lucide="upload" style="width:14px;height:14px"></i> Server Importer</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-divider"></div>
+
+  <!-- PRICING -->
+  <section id="pricing">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag reveal-scale">
+          <i data-lucide="credit-card" style="width:14px;height:14px"></i> Precio
+        </div>
+        <h2 class="reveal">Un pago,<br><span class="gradient-text">licencia para siempre</span></h2>
+        <p class="reveal">Sin suscripciones. Sin costos ocultos. Compra una vez y usa tu version de por vida.</p>
+      </div>
+      <div class="pricing-wrapper">
+        <div class="pricing-card featured reveal">
+          <div class="pricing-popular">Licencia Oficial</div>
+          <h3>Joincarp</h3>
+          <p class="price-desc">Panel de servidores Minecraft</p>
+          <div class="price">
+            <span class="amount">$15</span>
+            <span class="period">USD / PC</span>
+          </div>
+          <ul class="pricing-features">
+            <li><i data-lucide="check" style="width:16px;height:16px"></i> 1 licencia por computadora</li>
+            <li><i data-lucide="check" style="width:16px;height:16px"></i> Todas las 17 paginas incluidas</li>
+            <li><i data-lucide="check" style="width:16px;height:16px"></i> Consola con colores ANSI</li>
+            <li><i data-lucide="check" style="width:16px;height:16px"></i> Tienda de plugins y modpacks</li>
+            <li><i data-lucide="check" style="width:16px;height:16px"></i> Backups, Databases, Schedules</li>
+            <li><i data-lucide="check" style="width:16px;height:16px"></i> Actualizaciones de por vida</li>
+            <li><i data-lucide="check" style="width:16px;height:16px"></i> Soporte por Discord</li>
+            <li><i data-lucide="check" style="width:16px;height:16px"></i> Portable — sin instalacion</li>
+          </ul>
+          <a href="https://wa.me/51948935232?text=Hola%2C%20quiero%20comprar%20la%20licencia%20de%20Joincarp%20%28%2415%29" target="_blank" class="pricing-btn primary" style="text-align:center;display:block;text-decoration:none">
+            <i data-lucide="lock" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:6px"></i>
+            Comprar Licencia — $15
+          </a>
+          <p style="text-align:center;margin-top:12px;font-size:.8rem;color:var(--text-muted)">
+            Pago via PayPal: <strong style="color:var(--red)">djviccesa@icloud.com</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-divider"></div>
+
+  <!-- REVIEWS -->
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag reveal-scale">
+          <i data-lucide="thumbs-up" style="width:14px;height:14px"></i> Reseñas
+        </div>
+        <h2 class="reveal">Lo que dicen <span class="gradient-text">nuestros admins</span></h2>
+      </div>
+      <div class="reviews-grid">
+        <div class="review-card reveal">
+          <div class="review-stars"><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i></div>
+          <p>"Pase de tener PuTTY, FileZilla y un bot de Discord separados a manejar todo desde Joincarp. La consola con colores ANSI es una locura de fluida."</p>
+          <div class="review-author">
+            <div class="review-avatar">DK</div>
+            <div><strong>DarkKraft_</strong><span>Server owner, SMP privado</span></div>
+          </div>
+        </div>
+        <div class="review-card reveal">
+          <div class="review-stars"><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i></div>
+          <p>"Los backups automaticos me salvaron cuando un plugin corrupto tumbo el mundo. Restaure en 2 minutos desde el panel, sin tocar la terminal."</p>
+          <div class="review-author">
+            <div class="review-avatar">NP</div>
+            <div><strong>Nico_Plays</strong><span>Red de servidores, 3 nodos</span></div>
+          </div>
+        </div>
+        <div class="review-card reveal">
+          <div class="review-stars"><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i><i data-lucide="star"></i></div>
+          <p>"La tienda integrada con Modrinth me ahorra un monton de tiempo instalando plugins. Y el soporte por Discord responde rapido cuando tengo dudas."</p>
+          <div class="review-author">
+            <div class="review-avatar">JL</div>
+            <div><strong>JuanLoquendo</strong><span>Admin de modpack Forge</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-divider"></div>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag reveal-scale">
+          <i data-lucide="help-circle" style="width:14px;height:14px"></i> FAQ
+        </div>
+        <h2 class="reveal">Preguntas <span class="gradient-text">frecuentes</span></h2>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item reveal" onclick="this.classList.toggle('open')">
+          <h4>Que es Joincarp? <i data-lucide="chevron-down" style="width:18px;height:18px"></i></h4>
+          <p>Joincarp es una aplicacion de escritorio para Windows que te permite gestionar servidores Minecraft Java y Bedrock. Incluye consola, backups, tienda de plugins, gestion de jugadores y 14 herramientas mas.</p>
+        </div>
+        <div class="faq-item reveal" onclick="this.classList.toggle('open')">
+          <h4>Como funciona la licencia? <i data-lucide="chevron-down" style="width:18px;height:18px"></i></h4>
+          <p>Al comprar recibes un codigo de 16 digitos (XXXX-XXXX-XXXX-XXXX). Lo ingresas en la app y se vincula a tu PC. Es un pago unico de $15 USD via PayPal (djviccesa@icloud.com), sin renovaciones ni suscripciones. Escríbenos por WhatsApp al +51 948 935 232 para coordinar el pago.</p>
+        </div>
+        <div class="faq-item reveal" onclick="this.classList.toggle('open')">
+          <h4>Puedo usar la licencia en otra PC? <i data-lucide="chevron-down" style="width:18px;height:18px"></i></h4>
+          <p>La licencia esta vinculada a una sola PC (hardware-lock). Si necesitas cambiar de computadora, puedes desactivar la licencia desde Settings y activarla en la nueva.</p>
+        </div>
+        <div class="faq-item reveal" onclick="this.classList.toggle('open')">
+          <h4>Funciona con Paper, Spigot, Forge? <i data-lucide="chevron-down" style="width:18px;height:18px"></i></h4>
+          <p>Si. Joincarp soporta cualquier servidor basado en Java (Paper, Spigot, Purpur, Forge, Fabric) y tambien Bedrock. Detecta automaticamente el tipo de servidor.</p>
+        </div>
+        <div class="faq-item reveal" onclick="this.classList.toggle('open')">
+          <h4>Necesito instalar algo? <i data-lucide="chevron-down" style="width:18px;height:18px"></i></h4>
+          <p>No. Joincarp es portable — copias la carpeta dist/ y ejecutas. Tambien hay un instalador NSIS opcional si prefieres tener acceso desde el Menu Inicio.</p>
+        </div>
+        <div class="faq-item reveal" onclick="this.classList.toggle('open')">
+          <h4>Que tecnologia usa? <i data-lucide="chevron-down" style="width:18px;height:18px"></i></h4>
+          <p>Desarrollado en C++20 con Qt6, usa SQLite para datos, la API de Modrinth para la tienda, y RCON para comandos remotos. Optimizado para Windows 10/11 de 64 bits.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-divider"></div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="logo">
+            <div class="logo-icon">J</div>
+            <span>Joincarp</span>
+          </div>
+          <p>Panel de servidores Minecraft para Windows. Desarrollado por <a href="index.html" style="color:var(--red);text-decoration:underline">CodeForge Studio</a>.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Producto</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#pricing">Precio</a></li>
+            <li><a href="#faq">FAQ</a></li>
+            <li><a href="#">Changelog</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Soporte</h4>
+          <ul>
+            <li><a href="https://discord.gg/jp58rvsfVP" target="_blank">Discord</a></li>
+            <li><a href="https://wa.me/51948935232" target="_blank">WhatsApp</a></li>
+            <li><a href="mailto:codeforgestudio@gmail.com">Email</a></li>
+            <li><a href="index.html">CodeForge Studio</a></li>
+            <li><a href="terminos-joincarp.html">Terminos y Condiciones</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 CodeForge Studio. Todos los derechos reservados.</span>
+        <div class="footer-socials">
+          <a href="https://discord.gg/jp58rvsfVP" target="_blank" aria-label="Discord">
+            <i data-lucide="message-circle" style="width:16px;height:16px"></i>
+          </a>
+          <a href="https://wa.me/51948935232" target="_blank" aria-label="WhatsApp">
+            <i data-lucide="phone" style="width:16px;height:16px"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    /* LENIS */
+    const lenis = new Lenis({ duration:1.2, easing: t => Math.min(1, 1.001 - Math.pow(2, -10*t)), touchMultiplier:2 });
+    function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add(time => { lenis.raf(time * 1000); });
+    gsap.ticker.lagSmoothing(0);
+
+    /* THREE.JS — RED NEBULA */
+    (function() {
+      const canvas = document.getElementById('hero-canvas');
+      const W = window.innerWidth, H = window.innerHeight;
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, W/H, 0.1, 100);
+      camera.position.set(0, 0, 5);
+
+      const clock = new THREE.Clock();
+      const mouse = { x:0, y:0, tx:0, ty:0 };
+      document.addEventListener('mousemove', e => {
+        mouse.tx = (e.clientX/W - .5)*2;
+        mouse.ty = -(e.clientY/H - .5)*2;
+      });
+
+      /* Particles */
+      const count = 2200;
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(count*3);
+      const col = new Float32Array(count*3);
+      const sz  = new Float32Array(count);
+      const cRed = new THREE.Color('#FF5257');
+      const cPink = new THREE.Color('#FF2D55');
+      const cDark = new THREE.Color('#330011');
+
+      for(let i=0; i<count; i++){
+        const theta = Math.random()*Math.PI*2;
+        const phi = Math.acos(2*Math.random()-1);
+        const r = 2 + Math.random()*14;
+        pos[i*3]   = r*Math.sin(phi)*Math.cos(theta);
+        pos[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+        pos[i*3+2] = r*Math.cos(phi) - 3;
+        const mix = Math.random();
+        const c = mix<.33 ? cRed : mix<.66 ? cPink : cDark;
+        col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
+        sz[i] = 1 + Math.random()*6;
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col,3));
+      geo.setAttribute('size', new THREE.BufferAttribute(sz,1));
+
+      const mat = new THREE.ShaderMaterial({
+        vertexShader:`
+          attribute float size;
+          varying vec3 vColor;
+          void main(){
+            vColor=color;
+            vec4 mv=modelViewMatrix*vec4(position,1.0);
+            gl_PointSize=size*(220.0/-mv.z);
+            gl_Position=projectionMatrix*mv;
+          }`,
+        fragmentShader:`
+          varying vec3 vColor;
+          void main(){
+            float d=length(gl_PointCoord-vec2(0.5));
+            if(d>0.5) discard;
+            float a=smoothstep(0.5,0.05,d)*0.5;
+            gl_FragColor=vec4(vColor,a);
+          }`,
+        vertexColors:true, transparent:true, depthWrite:false,
+        blending:THREE.AdditiveBlending,
+      });
+      scene.add(new THREE.Points(geo, mat));
+
+      /* Central torus knot */
+      const knot = new THREE.Mesh(
+        new THREE.TorusKnotGeometry(1,.3,200,32,2,3),
+        new THREE.MeshBasicMaterial({color:0xFF5257, wireframe:true, transparent:true, opacity:.1})
+      );
+      scene.add(knot);
+
+      /* Floating shapes */
+      const shapes = [];
+      const sMats = [
+        new THREE.MeshBasicMaterial({color:0xFF5257,wireframe:true,transparent:true,opacity:.12}),
+        new THREE.MeshBasicMaterial({color:0xFF2D55,wireframe:true,transparent:true,opacity:.1}),
+      ];
+      for(let i=0;i<5;i++){
+        const g = i%2===0 ? new THREE.IcosahedronGeometry(.2+Math.random()*.3,0) : new THREE.OctahedronGeometry(.2+Math.random()*.3,0);
+        const m = new THREE.Mesh(g, sMats[i%2]);
+        const a = (i/5)*Math.PI*2;
+        m.position.set(Math.cos(a)*3,(Math.random()-.5)*2,Math.sin(a)*3);
+        m.userData = {a, r:3, sp:.1+Math.random()*.15, yo:m.position.y, bs:.4+Math.random(), ba:.2+Math.random()*.3};
+        scene.add(m); shapes.push(m);
+      }
+
+      function animate(){
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+        mouse.x += (mouse.tx-mouse.x)*.04;
+        mouse.y += (mouse.ty-mouse.y)*.04;
+
+        camera.position.x += (mouse.x*1.2-camera.position.x)*.03;
+        camera.position.y += (mouse.y*.8-camera.position.y)*.03;
+        camera.lookAt(0,0,0);
+
+        knot.rotation.x = t*.12 + mouse.y*.15;
+        knot.rotation.y = t*.18 + mouse.x*.15;
+
+        // Drift particles
+        const p = geo.attributes.position.array;
+        for(let i=0;i<count;i++) p[i*3+1] += Math.sin(t*.3+i*.05)*.0005;
+        geo.attributes.position.needsUpdate = true;
+
+        shapes.forEach(s=>{
+          const d=s.userData;
+          const a=d.a+t*d.sp;
+          s.position.x=Math.cos(a)*d.r;
+          s.position.z=Math.sin(a)*d.r;
+          s.position.y=d.yo+Math.sin(t*d.bs)*d.ba;
+          s.rotation.x=t*.4; s.rotation.y=t*.3;
+        });
+
+        renderer.render(scene,camera);
+      }
+      animate();
+
+      window.addEventListener('resize',()=>{
+        const w=window.innerWidth,h=window.innerHeight;
+        camera.aspect=w/h; camera.updateProjectionMatrix();
+        renderer.setSize(w,h);
+      });
+    })();
+
+    /* CURSOR */
+    (function(){
+      const dot=document.getElementById('cursorDot'), ring=document.getElementById('cursorRing');
+      let mx=0,my=0,rx=0,ry=0;
+      document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;gsap.set(dot,{x:mx,y:my});});
+      (function animR(){rx+=(mx-rx)*.15;ry+=(my-ry)*.15;gsap.set(ring,{x:rx,y:ry});requestAnimationFrame(animR);})();
+      document.querySelectorAll('a,button,.feature-card,.review-card,.faq-item,.page-chip,[data-tilt]').forEach(el=>{
+        el.addEventListener('mouseenter',()=>{dot.classList.add('hovering');ring.classList.add('hovering');});
+        el.addEventListener('mouseleave',()=>{dot.classList.remove('hovering');ring.classList.remove('hovering');});
+      });
+      document.addEventListener('mousedown',()=>dot.classList.add('clicking'));
+      document.addEventListener('mouseup',()=>dot.classList.remove('clicking'));
+    })();
+
+    /* NAVBAR */
+    window.addEventListener('scroll',()=>{
+      document.getElementById('navbar').classList.toggle('scrolled',scrollY>50);
+    });
+
+    /* MOBILE */
+    (function(){
+      const t=document.getElementById('mobileToggle'),m=document.getElementById('mobileMenu'),
+            c=document.getElementById('mobileClose');
+      t.addEventListener('click',()=>m.classList.add('active'));
+      c.addEventListener('click',()=>m.classList.remove('active'));
+      m.querySelectorAll('.mobile-link').forEach(l=>l.addEventListener('click',()=>m.classList.remove('active')));
+    })();
+
+    /* GSAP REVEALS */
+    (function(){
+      gsap.registerPlugin(ScrollTrigger);
+      gsap.utils.toArray('.reveal').forEach(el=>{
+        gsap.to(el,{opacity:1,y:0,duration:.9,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',toggleActions:'play none none none'}});
+      });
+      gsap.utils.toArray('.reveal-scale').forEach(el=>{
+        gsap.to(el,{opacity:1,scale:1,duration:.8,ease:'back.out(1.4)',scrollTrigger:{trigger:el,start:'top 90%',toggleActions:'play none none none'}});
+      });
+      ScrollTrigger.batch('.feature-card',{
+        onEnter:elements=>gsap.to(elements,{opacity:1,y:0,stagger:.1,duration:.8,ease:'power3.out'}),
+        start:'top 88%',
+      });
+      ScrollTrigger.batch('.review-card',{
+        onEnter:elements=>gsap.to(elements,{opacity:1,y:0,stagger:.1,duration:.8,ease:'power3.out'}),
+        start:'top 88%',
+      });
+    })();
+
+    /* PAGES CAROUSEL AUTO-SCROLL */
+    (function(){
+      const track=document.getElementById('pagesTrack');
+      let isDrag=false, startX, scrollL;
+      // Clone for infinite
+      track.innerHTML += track.innerHTML;
+      let spd=.6, frame;
+      function autoScroll(){
+        if(!isDrag){track.scrollLeft+=spd; if(track.scrollLeft>=track.scrollWidth/2) track.scrollLeft=0;}
+        frame=requestAnimationFrame(autoScroll);
+      }
+      track.scrollLeft=0; autoScroll();
+      track.addEventListener('mousedown',e=>{isDrag=true;startX=e.pageX-track.offsetLeft;scrollL=track.scrollLeft;});
+      track.addEventListener('mouseleave',()=>isDrag=false);
+      track.addEventListener('mouseup',()=>isDrag=false);
+      track.addEventListener('mousemove',e=>{if(!isDrag)return;e.preventDefault();track.scrollLeft=scrollL-(e.pageX-track.offsetLeft-startX)*1.5;});
+      track.addEventListener('touchstart',e=>{isDrag=true;startX=e.touches[0].pageX-track.offsetLeft;scrollL=track.scrollLeft;},{passive:true});
+      track.addEventListener('touchend',()=>isDrag=false);
+      track.addEventListener('touchmove',e=>{if(!isDrag)return;track.scrollLeft=scrollL-(e.touches[0].pageX-track.offsetLeft-startX)*1.5;},{passive:true});
+    })();
+  </script>
+</body>
+</html>
